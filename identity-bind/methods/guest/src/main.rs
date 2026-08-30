@@ -10,9 +10,8 @@ use risc0_zkvm::guest::env;
 ///
 /// If owner_id != expected_owner the guest panics and no receipt is produced.
 /// If amount > pledged the guest panics — the collateral rule lives inside
-/// the proof, not in a contract.
-/// This is the coprocessor-shaped version of the split-ledger bug in lane 1:
-/// the proof is only valid when the ID and the owner are the same object.
+/// the proof, not in a contract. A valid receipt means one identity: the
+/// committed owner is the expected owner, and amount is within pledged.
 fn main() {
     let receipt_id: u64 = env::read();
     let owner_id: u64 = env::read();

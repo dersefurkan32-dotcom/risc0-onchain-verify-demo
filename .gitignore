@@ -1,4 +1,12 @@
 target/
 out/
 cache/
+broadcast/
 node_modules/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+receipt.json
+identity-bind/receipt-local.json

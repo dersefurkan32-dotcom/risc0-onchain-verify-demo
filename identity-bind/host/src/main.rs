@@ -1,10 +1,34 @@
 use methods::{IDENTITY_BIND_ELF, IDENTITY_BIND_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts};
 
+fn print_help() {
+    eprintln!(
+        "identity-bind host\n\
+         \n\
+         Usage:\n\
+           cargo run --release -- [flags]\n\
+         \n\
+         Flags:\n\
+           --help       this message\n\
+           --groth16    Groth16 seal (needed for the Solidity verifier)\n\
+           --save PATH  write the receipt JSON to PATH\n\
+           --mismatch   expected owner != owner (guest panics, no receipt)\n\
+           --overdraw   amount > pledged (guest panics, no receipt)\n\
+         \n\
+         Dev mode (no real proof):\n\
+           RISC0_DEV_MODE=1 cargo run --release"
+    );
+}
+
 fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
+
+    if std::env::args().any(|a| a == "--help" || a == "-h") {
+        print_help();
+        return;
+    }
 
     let mismatch = std::env::args().any(|a| a == "--mismatch");
     let overdraw = std::env::args().any(|a| a == "--overdraw");
