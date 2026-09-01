@@ -1,6 +1,6 @@
 # RISC Zero on-chain verify lab
 
-[![ci](https://github.com/dersefurkan32-dotcom/risc0-onchain-verify-demo/actions/workflows/ci.yml/badge.svg)](https://github.com/dersefurkan32-dotcom/risc0-onchain-verify-demo/actions/workflows/ci.yml)
+[![ci](https://github.com/dersefurkan/risc0-onchain-verify-demo/actions/workflows/ci.yml/badge.svg)](https://github.com/dersefurkan/risc0-onchain-verify-demo/actions/workflows/ci.yml)
 
 End-to-end zkVM seam, local only: **Rust guest → Groth16 receipt → Solidity verifier**.
 
