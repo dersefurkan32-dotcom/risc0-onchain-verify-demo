@@ -85,3 +85,73 @@ fn main() {
         println!("receipt saved to {path} ({} bytes)", bytes.len());
     }
 }
+
+/// Guest-side tests: execute the program natively (no proving) and check the
+/// security rules that live inside the proof. These run in seconds and need
+/// no Groth16 pipeline: `cargo test` from `identity-bind/`.
+#[cfg(test)]
+mod tests {
+    use methods::IDENTITY_BIND_ELF;
+    use risc0_zkvm::{default_executor, ExecutorEnv};
+
+    fn execute(
+        receipt_id: u64,
+        owner_id: u64,
+        amount: u64,
+        expected_owner: u64,
+        pledged: u64,
+    ) -> Result<risc0_zkvm::SessionInfo, String> {
+        let env = ExecutorEnv::builder()
+            .write(&receipt_id)
+            .unwrap()
+            .write(&owner_id)
+            .unwrap()
+            .write(&amount)
+            .unwrap()
+            .write(&expected_owner)
+            .unwrap()
+            .write(&pledged)
+            .unwrap()
+            .build()
+            .unwrap();
+        default_executor()
+            .execute(env, IDENTITY_BIND_ELF)
+            .map_err(|e| format!("{e:?}"))
+    }
+
+    /// The honest case: execution succeeds and the journal commits exactly
+    /// (receipt_id, owner, amount) — nothing more, nothing else.
+    #[test]
+    fn honest_withdrawal_executes_and_commits_journal() {
+        let info = execute(7, 0xA11CE, 100, 0xA11CE, 1_000).unwrap();
+        let (id, owner, amount): (u64, u64, u64) = info.journal.decode().unwrap();
+        assert_eq!((id, owner, amount), (7, 0xA11CE, 100));
+    }
+
+    /// Identity split: owner != expected owner -> guest panics -> no receipt
+    /// can exist for this statement.
+    #[test]
+    fn mismatched_identity_fails_execution() {
+        assert!(execute(7, 0xA11CE, 100, 0xA11CF, 1_000).is_err());
+    }
+
+    /// Collateral rule: amount > pledged -> guest panics, even with the
+    /// correct identity.
+    #[test]
+    fn overdraw_fails_execution() {
+        assert!(execute(7, 0xA11CE, 1_001, 0xA11CE, 1_000).is_err());
+    }
+
+    /// Boundary: amount == pledged is allowed, pledged + 1 is not.
+    #[test]
+    fn boundary_at_pledged() {
+        assert!(execute(7, 0xA11CE, 1_000, 0xA11CE, 1_000).is_ok());
+        assert!(execute(7, 0xA11CE, 1_001, 0xA11CE, 1_000).is_err());
+    }
+
+    /// Zero amount is rejected: a receipt must move something.
+    #[test]
+    fn zero_amount_fails_execution() {
+        assert!(execute(7, 0xA11CE, 0, 0xA11CE, 1_000).is_err());
+    }
+}

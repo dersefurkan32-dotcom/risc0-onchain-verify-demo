@@ -24,7 +24,10 @@ cargo run --release -- --help
 cargo run --release -- --groth16 --save receipt.json # real proof (Docker for shrink-wrap)
 cargo run --release -- --mismatch                    # guest panics: no receipt
 cargo run --release -- --overdraw                    # guest panics: no receipt
+cargo test --release                                 # guest-side rules, executor only (5 tests)
 ```
+
+The guest-side tests pin the rules that live inside the proof: the honest journal decodes to exactly `(receipt_id, owner, amount)`, an identity mismatch fails execution, `amount > pledged` fails, `amount == pledged` passes, and a zero amount fails. No proving — the native executor answers in milliseconds.
 
 `identity-bind/receipt-groth16.json` is a committed real receipt from this code (1.6 KB seal). Reproducing a new Groth16 receipt needs RISC Zero (`rzup`) and Docker. The on-chain tests do **not**.
 
@@ -41,7 +44,16 @@ forge test -vv
 [PASS] test_groth16_receipt_verifies_onchain()   # real pairing, real seal
 [PASS] test_tampered_journal_reverts()           # amount 100→101: reverts
 [PASS] test_wrong_image_id_reverts()             # different guest: reverts
+[PASS] test_wrong_selector_prefix_reverts()      # foreign verifier version: reverts
+[PASS] test_truncated_seal_reverts()             # short seal: reverts
+[PASS] testFuzz_foreign_journal_digest_reverts() # 256 random digests: all revert
+[PASS] test_journal_layout_decodes()             # documents the three LE u64 the journal binds
 ```
+
+Two behaviors are pinned by tests because reviewers keep assuming the opposite:
+
+- **Replay passes the raw verifier** (`test_raw_verifier_accepts_replay_by_design`). The verifier is stateless; the same receipt verifies twice. Replay resistance is the *application's* job — bind chain id / context / nonce inside the journal.
+- **Trailing seal bytes are ignored** (`test_appended_garbage_accepted_seal_malleability`). The verifier decodes a fixed-size Groth16 seal; `seal ‖ garbage` verifies the same statement. Not a forgery — but any integration that keys a nullifier or replay registry on *raw seal bytes* sees two "different" receipts. Key on `(imageId, journalDigest)`.
 
 The negative tests are the point: the verifier binds the exact guest image and the exact journal. Everything else reverts.
 

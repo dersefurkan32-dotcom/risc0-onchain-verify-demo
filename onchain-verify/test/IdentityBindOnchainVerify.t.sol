@@ -10,7 +10,7 @@ import {ControlID} from "risc0-ethereum/contracts/src/groth16/ControlID.sol";
 /// Verify a real RISC Zero Groth16 receipt on a local EVM.
 /// Receipt produced by the identity-bind guest (risc0-zkvm 3.0.6).
 /// journal = (receipt_id=7, owner=0xA11CE, amount=100) as three little-endian u64.
-contract IdentityBindOnchainVerifyTest is Test {
+abstract contract IdentityBindOnchainVerifyTest is Test {
     bytes32 constant IMAGE_ID = 0xeb8c0bba0591976ce263f7ff19b5da79b08f5a303362c796059390d121eded11;
 
     bytes constant SEAL = // 256 bytes, raw Groth16 seal (no selector prefix)
